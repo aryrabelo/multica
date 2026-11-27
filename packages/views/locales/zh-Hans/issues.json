@@ -1788,6 +1788,8 @@
       "handed_to": "已交给",
       "run_started": "并开始运行 ·",
       "member_no_run": "（成员，不启动运行）",
+      "no_run_blocked": "· 暂未运行：阻塞项完成后开始",
+      "no_run_triage": "· 未运行：事项在分拣中",
       "show_brief": "查看交接说明",
       "hide_brief": "收起交接说明",
       "brief_header": "这次运行收到的工作流说明"

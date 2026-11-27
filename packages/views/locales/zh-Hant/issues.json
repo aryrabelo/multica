@@ -1788,6 +1788,8 @@
       "handed_to": "已交給",
       "run_started": "並開始執行 ·",
       "member_no_run": "（成員，不啟動執行）",
+      "no_run_blocked": "· 暫未執行：阻擋項完成後開始",
+      "no_run_triage": "· 未執行：事項在分揀中",
       "show_brief": "檢視交接說明",
       "hide_brief": "收起交接說明",
       "brief_header": "這次執行收到的工作流說明"

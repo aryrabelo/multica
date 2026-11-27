@@ -1788,6 +1788,8 @@
       "handed_to": "引き継ぎ先",
       "run_started": "実行を開始 ·",
       "member_no_run": "（メンバー、実行なし）",
+      "no_run_blocked": "· まだ実行なし：ブロック中の課題が終わると開始",
+      "no_run_triage": "· 実行なし：課題はトリアージ中",
       "show_brief": "引き継ぎの説明を見る",
       "hide_brief": "引き継ぎの説明を閉じる",
       "brief_header": "この実行が受け取ったワークフローの説明"
