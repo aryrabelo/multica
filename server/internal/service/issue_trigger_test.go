@@ -60,6 +60,7 @@ func TestWillEnqueueRunNamesWhyAWriteStartsNoRun(t *testing.T) {
 		input       func(db.Issue) IssueTriggerInput
 		probe       IssueTriggerProbe
 		pendingTask bool
+		blocked     bool
 		wantRun     bool
 		want        dispatch.ReasonCode
 	}{
@@ -89,12 +90,22 @@ func TestWillEnqueueRunNamesWhyAWriteStartsNoRun(t *testing.T) {
 		{name: "promotion with a run already pending", issue: assigned("agent", agentID, "todo"), input: promote,
 			pendingTask: true, want: dispatch.ReasonCoalesced},
 		{name: "squad whose leader has no runtime", issue: assigned("squad", squadID, "todo"), input: assign, want: dispatch.ReasonAgentRuntimeRequired},
+		{name: "assignment with an open blocker", issue: assigned("agent", agentID, "todo"), input: assign, blocked: true, want: dispatch.ReasonBlockedByIssues},
+		{name: "promotion with an open blocker", issue: assigned("agent", agentID, "todo"), input: promote, blocked: true, want: dispatch.ReasonBlockedByIssues},
+		{name: "edit with an open blocker", issue: assigned("agent", agentID, "todo"), input: edit, blocked: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			issueID := f.Issue(t, tc.name, tc.issue)
 			f.Cleanup(t, `DELETE FROM agent_task_queue WHERE issue_id = $1`, issueID)
 			if tc.pendingTask {
 				f.Task(t, agentID, testutil.Cols{"issue_id": issueID, "runtime_id": runtimeID, "status": "queued"})
+			}
+			if tc.blocked {
+				blockerID := f.Issue(t, tc.name+" blocker", testutil.Cols{"status": "in_progress"})
+				if err := AddIssueBlocker(ctx, q, util.MustParseUUID(workspaceID), util.MustParseUUID(issueID), util.MustParseUUID(blockerID), "member", util.MustParseUUID(userID)); err != nil {
+					t.Fatalf("add blocker: %v", err)
+				}
+				f.Cleanup(t, `DELETE FROM issue_blocker WHERE issue_id = $1`, issueID)
 			}
 			issue, err := q.GetIssue(ctx, util.MustParseUUID(issueID))
 			if err != nil {
