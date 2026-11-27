@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"sort"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -162,6 +163,17 @@ func validateIssueEnvironmentReport(env *IssueEnvironmentReport, now time.Time) 
 	return ""
 }
 
+// trimEnvironmentSnapshot keeps the environments the sidebar most needs when a
+// daemon reports more than the server stores: live ones before ended ones, in
+// the daemon's order otherwise. A machine that runs many short-lived test
+// servers piles up stopped rows; rejecting the whole snapshot would also drop
+// the live ones, and the daemon would resend it every pass.
+func trimEnvironmentSnapshot(envs []IssueEnvironmentReport) []IssueEnvironmentReport {
+	live := func(state string) bool { return state == "running" || state == "starting" }
+	sort.SliceStable(envs, func(i, j int) bool { return live(envs[i].State) && !live(envs[j].State) })
+	return envs[:maxIssueEnvironmentsPerSnapshot]
+}
+
 // ReportTaskEnvironments replaces the daemon's view of one task's environments.
 // The snapshot is complete: an environment the task reported before and omits
 // now has ended.
@@ -171,23 +183,32 @@ func (h *Handler) ReportTaskEnvironments(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	var req ReportTaskEnvironmentsRequest
+	// The daemon does not log a rejected snapshot, so the server names why.
+	reject := func(msg string, env *IssueEnvironmentReport) {
+		args := []any{"task_id", uuidToString(task.ID), "reason", msg, "count", len(req.Environments)}
+		if env != nil {
+			args = append(args, "source", env.Source, "state", env.State, "name", env.Name, "label_len", len(env.Label), "port", env.Port)
+		}
+		slog.Warn("environment snapshot rejected", args...)
+		writeError(w, http.StatusBadRequest, msg)
+	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		reject("invalid request body: "+err.Error(), nil)
 		return
 	}
 	if len(req.Environments) > maxIssueEnvironmentsPerSnapshot {
-		writeError(w, http.StatusBadRequest, "too many environments")
-		return
+		slog.Info("environment snapshot trimmed", "task_id", uuidToString(task.ID), "count", len(req.Environments), "kept", maxIssueEnvironmentsPerSnapshot)
+		req.Environments = trimEnvironmentSnapshot(req.Environments)
 	}
 	now := time.Now()
 	seen := make(map[string]bool, len(req.Environments))
 	for i := range req.Environments {
 		if reason := validateIssueEnvironmentReport(&req.Environments[i], now); reason != "" {
-			writeError(w, http.StatusBadRequest, "environment "+req.Environments[i].Key+": "+reason)
+			reject("environment "+req.Environments[i].Key+": "+reason, &req.Environments[i])
 			return
 		}
 		if seen[req.Environments[i].Key] {
-			writeError(w, http.StatusBadRequest, "duplicate environment key "+req.Environments[i].Key)
+			reject("duplicate environment key "+req.Environments[i].Key, &req.Environments[i])
 			return
 		}
 		seen[req.Environments[i].Key] = true

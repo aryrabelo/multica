@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -23,6 +24,26 @@ func reportEnvironments(t *testing.T, taskID string, envs ...map[string]any) *te
 	req := withURLParam(newOwnerDaemonRequest(http.MethodPost, "/api/daemon/tasks/"+taskID+"/environments",
 		map[string]any{"environments": envs}), "taskId", taskID)
 	return testutil.Call(t, testHandler.ReportTaskEnvironments, req)
+}
+
+// A machine running many short-lived test servers reports more environments
+// than the server keeps. The snapshot is stored, with the live ones, instead
+// of being refused and resent on every pass.
+func TestReportEnvironmentsOverLimitKeepsLiveOnes(t *testing.T) {
+	_, taskID := issueEnvironmentFixture(t)
+	envs := make([]map[string]any, 0, maxIssueEnvironmentsPerSnapshot+8)
+	for i := range maxIssueEnvironmentsPerSnapshot + 5 {
+		envs = append(envs, map[string]any{"key": fmt.Sprintf("stopped-%d", i), "source": "detected", "name": "workerd", "state": "stopped"})
+	}
+	for i := range 3 {
+		envs = append(envs, map[string]any{"key": fmt.Sprintf("running-%d", i), "source": "detected", "name": "node", "state": "running"})
+	}
+	reportEnvironments(t, taskID, envs...).Want(http.StatusOK)
+	var total, running int
+	dbfx.QueryRow(t, `SELECT count(*), count(*) FILTER (WHERE state = 'running') FROM issue_environment WHERE task_id = $1`, taskID).Scan(&total, &running)
+	if total != maxIssueEnvironmentsPerSnapshot || running != 3 {
+		t.Fatalf("stored %d environments, %d running; want %d with all 3 running", total, running, maxIssueEnvironmentsPerSnapshot)
+	}
 }
 
 func listEnvironments(t *testing.T, issueID string) map[string]IssueEnvironmentResponse {
