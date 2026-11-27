@@ -89,6 +89,11 @@ const (
 	// nothing is pending — the trigger is answered by accepting the issue out of
 	// Triage, not by waiting.
 	ReasonIssueInTriage ReasonCode = "issue_in_triage"
+	// ReasonBlockedByIssues: the issue has open blockers, so a trigger that
+	// would run its assignee waits instead. Deferred, not refused: the
+	// blockers_done rule starts the run once every blocker finishes. Like
+	// issue_in_triage it is a property of the issue, so it is enumeration-safe.
+	ReasonBlockedByIssues ReasonCode = "blocked_by_issues"
 	// ReasonProjectAccessBlocked: the issue is in a private project that the
 	// run's member or the agent's owner cannot access (MUL-8472). The caller
 	// already sees the issue, so the code reveals nothing new about it.
