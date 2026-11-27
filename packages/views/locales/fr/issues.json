@@ -1869,6 +1869,8 @@
       "handed_to": "Confiée à",
       "run_started": "exécution lancée ·",
       "member_no_run": "(membre, sans exécution)",
+      "no_run_blocked": "· pas encore d'exécution : elle démarre une fois les blocages terminés",
+      "no_run_triage": "· pas d'exécution : le ticket est en Triage",
       "show_brief": "Voir les consignes",
       "hide_brief": "Masquer les consignes",
       "brief_header": "Les consignes de workflow reçues par cette exécution"

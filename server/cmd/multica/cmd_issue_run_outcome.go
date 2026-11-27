@@ -30,8 +30,11 @@ func issueRunOutcomeNote(o *issueRunOutcome, noStart bool) string {
 	case "coalesced":
 		return "no new run started: a pending run on this issue already covers it"
 	case "deferred":
-		if o.ReasonCode == "already_active" {
+		switch o.ReasonCode {
+		case "already_active":
 			return "no new run started: the assignee's active run on this issue covers it"
+		case "blocked_by_issues":
+			return "no run started yet: the issue has open blockers, and the assignee runs once they all finish"
 		}
 		return "no run started: the issue is in backlog and runs once it moves to an active status"
 	}

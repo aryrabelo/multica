@@ -156,7 +156,7 @@ func declinedRunStatus(reason DispatchReasonCode) DispatchStatus {
 	switch reason {
 	case ReasonCoalesced:
 		return DispatchCoalesced
-	case ReasonDeferred, ReasonAlreadyActive:
+	case ReasonDeferred, ReasonAlreadyActive, ReasonBlockedByIssues:
 		return DispatchDeferred
 	}
 	return DispatchBlocked

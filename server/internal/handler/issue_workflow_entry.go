@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/multica-ai/multica/server/internal/dispatch"
 	"github.com/multica-ai/multica/server/internal/issuestatus"
 	"github.com/multica-ai/multica/server/internal/issueworkflow"
 	"github.com/multica-ai/multica/server/internal/service"
@@ -152,8 +153,10 @@ func workflowStepMoved(def *issueworkflow.Definition, status string, run *db.Age
 
 // workflowHandoffPayload describes a handoff on the issue:updated event, so
 // the activity log can record the status change and the handoff as one
-// timeline entry.
-func workflowHandoffPayload(issue db.Issue, hand *workflowHandoff, note string, runStarted bool) map[string]string {
+// timeline entry. A handoff that started no run records why when the reason
+// is a property of the issue; reasons about the handler's agent or runtime
+// stay with the caller's run outcome, since every member sees the timeline.
+func workflowHandoffPayload(issue db.Issue, hand *workflowHandoff, note string, runStarted bool, decline dispatch.ReasonCode) map[string]string {
 	out := map[string]string{
 		"workflow": hand.def.Name,
 		"to_type":  issue.AssigneeType.String,
@@ -162,6 +165,9 @@ func workflowHandoffPayload(issue db.Issue, hand *workflowHandoff, note string, 
 	}
 	if runStarted && note != "" {
 		out["note"] = note
+	}
+	if !runStarted && (decline == dispatch.ReasonBlockedByIssues || decline == dispatch.ReasonIssueInTriage) {
+		out["decline"] = string(decline)
 	}
 	return out
 }

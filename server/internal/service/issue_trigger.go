@@ -144,6 +144,15 @@ func (s *IssueService) WillEnqueueRun(ctx context.Context, in IssueTriggerInput,
 		return IssueRunTrigger{}, false
 	}
 
+	// Open blockers defer the run: the blockers_done rule starts it once they
+	// all finish.
+	blocked, err := s.Queries.HasOpenIssueBlockers(ctx, db.HasOpenIssueBlockersParams{WorkspaceID: issue.WorkspaceID, IssueID: issue.ID})
+	if err != nil {
+		return declineRun(dispatch.ReasonInternalError)
+	}
+	if blocked {
+		return declineRun(dispatch.ReasonBlockedByIssues)
+	}
 	// Triage is stricter than the backlog parking lot: backlog defers a run,
 	// Triage refuses one outright (MUL-7189 §2.3). Deciding it here is what
 	// keeps the trigger PREVIEW honest — the queue door would refuse the insert
@@ -152,10 +161,6 @@ func (s *IssueService) WillEnqueueRun(ctx context.Context, in IssueTriggerInput,
 	// Leaving Triage needs no case of its own. Triage is not a status, so accept
 	// clears this field and then takes the ordinary create / assign path; there
 	// is no "was in triage" transition for this predicate to recognise.
-	blocked, err := s.Queries.HasOpenIssueBlockers(ctx, db.HasOpenIssueBlockersParams{WorkspaceID: issue.WorkspaceID, IssueID: issue.ID})
-	if err != nil || blocked {
-		return IssueRunTrigger{}, false
-	}
 	if issue.TriageState.Valid {
 		return declineRun(dispatch.ReasonIssueInTriage)
 	}

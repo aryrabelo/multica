@@ -62,6 +62,45 @@ func TestIssueBlockerReleaseKeepsWorkflowBrief(t *testing.T) {
 	}
 }
 
+// A handoff into a column whose issue still has open blockers starts no run
+// yet. The caller and the timeline both learn why, instead of a bare
+// run=false (NUR-360).
+func TestBlockedHandoffRecordsWhyNoRunStarted(t *testing.T) {
+	seedTestCatalog(t)
+	agent := seededReadyAgentID(t)
+	project := deliveryProject(t, "Blocked handoff "+workflowTestSuffix(), agent)
+	prerequisite := blockerTestIssue(t, map[string]any{"status": "in_progress"})
+	issue := blockerTestIssue(t, map[string]any{"status": "todo", "project_id": project, "blocked_by": []string{prerequisite.ID}})
+
+	handoffs := make(chan map[string]string, 1)
+	testHandler.Bus.Subscribe(protocol.EventIssueUpdated, func(e events.Event) {
+		payload, _ := e.Payload.(map[string]any)
+		resp, _ := payload["issue"].(IssueResponse)
+		hand, ok := payload["workflow_handoff"].(map[string]string)
+		if !ok || resp.ID != issue.ID {
+			return
+		}
+		select {
+		case handoffs <- hand:
+		default:
+		}
+	})
+
+	resp := updateIssueForOutcome(t, issue.ID, map[string]any{"status": "in_progress"})
+	wantRunOutcome(t, resp.RunOutcome, "agent", agent, DispatchDeferred, ReasonBlockedByIssues)
+	if n := dbfx.Count(t, "SELECT count(*) FROM agent_task_queue WHERE issue_id=$1", issue.ID); n != 0 {
+		t.Fatalf("blocked handoff queued %d runs", n)
+	}
+	select {
+	case hand := <-handoffs:
+		if hand["run"] != "false" || hand["decline"] != string(ReasonBlockedByIssues) {
+			t.Fatalf("workflow_handoff = %v, want run=false decline=%s", hand, ReasonBlockedByIssues)
+		}
+	default:
+		t.Fatal("issue:updated carried no workflow_handoff")
+	}
+}
+
 func TestIssueBlockerAtomicAPIAndFilter(t *testing.T) {
 	a := blockerTestIssue(t, map[string]any{"status": "todo"})
 	b := blockerTestIssue(t, map[string]any{"status": "todo", "blocked_by": []string{a.ID}, "assignee_type": "agent", "assignee_id": handlerTestAgentID(t)})

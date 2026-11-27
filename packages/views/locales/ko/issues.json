@@ -1788,6 +1788,8 @@
       "handed_to": "인계 대상",
       "run_started": "실행 시작 ·",
       "member_no_run": "(멤버, 실행 없음)",
+      "no_run_blocked": "· 아직 실행 없음: 차단 이슈가 끝나면 시작",
+      "no_run_triage": "· 실행 없음: 이슈가 분류 대기 중",
       "show_brief": "인계 설명 보기",
       "hide_brief": "인계 설명 접기",
       "brief_header": "이번 실행이 받은 워크플로 설명"
