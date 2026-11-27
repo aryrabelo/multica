@@ -9,8 +9,9 @@ import { BriefBlock } from "./handoff-form";
 
 /**
  * The handoff half of a status-change timeline entry (MUL-7420): who the
- * workflow step handed the issue to, whether their run started, and the brief
- * that run received. Renders nothing for an ordinary status change.
+ * workflow step handed the issue to, whether their run started (or why not,
+ * when the reason is the issue's own), and the brief that run received.
+ * Renders nothing for an ordinary status change.
  */
 export function TimelineHandoff({ details }: { details: Record<string, string> }) {
   const { t } = useT("issues");
@@ -45,6 +46,10 @@ export function TimelineHandoff({ details }: { details: Record<string, string> }
               </button>
             )}
           </>
+        ) : details.handoff_decline === "blocked_by_issues" ? (
+          <span>{t(($) => $.workflows.timeline.no_run_blocked)}</span>
+        ) : details.handoff_decline === "issue_in_triage" ? (
+          <span>{t(($) => $.workflows.timeline.no_run_triage)}</span>
         ) : null}
       </div>
       {open && note && (

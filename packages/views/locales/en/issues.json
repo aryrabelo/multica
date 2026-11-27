@@ -1869,6 +1869,8 @@
       "handed_to": "Handed to",
       "run_started": "and started a run ·",
       "member_no_run": "(member, no run)",
+      "no_run_blocked": "· no run yet: it starts once the blockers finish",
+      "no_run_triage": "· no run: the issue is in Triage",
       "show_brief": "View handoff brief",
       "hide_brief": "Hide handoff brief",
       "brief_header": "The workflow brief this run received"

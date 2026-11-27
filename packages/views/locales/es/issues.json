@@ -1862,6 +1862,8 @@
       "handed_to": "Traspasada a",
       "run_started": "e inició una ejecución ·",
       "member_no_run": "(miembro, sin ejecución)",
+      "no_run_blocked": "· aún sin ejecución: empieza cuando terminen los bloqueos",
+      "no_run_triage": "· sin ejecución: la incidencia está en Triage",
       "show_brief": "Ver el encargo del traspaso",
       "hide_brief": "Ocultar el encargo del traspaso",
       "brief_header": "El encargo del flujo de trabajo que recibió esta ejecución"
